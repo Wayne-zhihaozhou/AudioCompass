@@ -24,8 +24,8 @@ void AudioCapture::start() {
 	// 等待 pwfx 初始化
 	while (pwfx == nullptr) Sleep(10);
 
-	modelThreadHandle = std::thread(&AudioCapture::modelThread, this);
-	saveThreadHandle = std::thread(&AudioCapture::savePcmWavStreaming, this);
+	modelThreadHandle = std::thread(&AudioCapture::myThread, this);
+	//saveThreadHandle = std::thread(&AudioCapture::savePcmWavStreaming, this);
 }
 
 /**
@@ -297,7 +297,7 @@ void AudioCapture::DrawOverlayArc(float angleDeg) {
 	g.SetSmoothingMode(SmoothingModeAntiAlias);
 	g.Clear(Color(0, 0, 0, 0));
 
-	const float arcSpan = 50.0f;
+	const float arcSpan = 5.0f;
 	const float radius = (float)min(w, h) * 0.25f;
 	const float cx = w * 0.5f;
 	const float cy = h * 0.5f;
@@ -316,7 +316,7 @@ void AudioCapture::DrawOverlayArc(float angleDeg) {
 
 	// 绘制角度文字
 	FontFamily fontFamily(L"Arial");
-	Font font(&fontFamily, radius * 0.15f, FontStyleBold, UnitPixel);
+	Font font(&fontFamily, radius * 0.1f, FontStyleBold, UnitPixel);
 	SolidBrush brush(Color(255, 255, 255, 0));  // 白色文字
 	std::wstring angleText = L"Angle: " + std::to_wstring(static_cast<int>(angleDeg)) + L"°";
 	PointF textPos(cx - radius * 0.2f, cy - radius - 30);
@@ -343,10 +343,9 @@ void AudioCapture::DrawOverlayArc(float angleDeg) {
 /**
  * 模型线程
  */
-void AudioCapture::modelThread() {
+void AudioCapture::myThread() {
 	while (running || !modelQueue.empty()) {
-		//延迟
-		//Sleep(100);
+		
 		std::unique_lock<std::mutex> lock(modelMutex);
 		modelCV.wait(lock, [this] { return !modelQueue.empty() || !running; });
 
@@ -368,6 +367,7 @@ void AudioCapture::modelThread() {
 			if (event.highFreq) {
 				PostMessage(mainWindowHandle, WM_USER + 100, 0, reinterpret_cast<LPARAM>(new AudioEvent(event)));
 			}
+			//Sleep(1);//延迟
 		}
 	}
 }

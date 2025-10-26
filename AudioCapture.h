@@ -68,7 +68,7 @@ private:
     void captureThread();
     float getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WAVEFORMATEX* pwfx);
     
-    void modelThread();
+    void myThread();
     void savePcmWavStreaming();
 
     void simpleFFT(const std::vector<float>& in, std::vector<std::complex<float>>& out);
