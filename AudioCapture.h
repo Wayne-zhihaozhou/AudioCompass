@@ -1,4 +1,4 @@
-
+ï»¿
 #pragma once
 #include <windows.h>
 #include <mmdeviceapi.h>
@@ -16,7 +16,7 @@
 
 /**
  * @struct AudioFrame
- * ±£´æµ¥Ö¡ÒôÆµÊı¾İ
+ * ä¿å­˜å•å¸§éŸ³é¢‘æ•°æ®
  */
 struct AudioFrame {
     std::vector<uint8_t> data;
@@ -24,25 +24,27 @@ struct AudioFrame {
 
 /**
  * @class AudioCapture
- * ÒôÆµ²¶»ñ¡¢´¦ÀíºÍ±£´æÀà£¬Ê¹ÓÃ WASAPI Loopback ²¶»ñÏµÍ³ÒôÆµ
+ * éŸ³é¢‘æ•è·ã€å¤„ç†å’Œä¿å­˜ç±»ï¼Œä½¿ç”¨ WASAPI Loopback æ•è·ç³»ç»ŸéŸ³é¢‘
  */
 class AudioCapture {
 public:
-    // ÓÃ»§¿ÉÉèÖÃ²ÎÊı
-    float highFreqMin = 10000.0f;       // ¸ßÆµãĞÖµ
-    float highFreqEpsilon = 0.001f;     // ¸ßÆµ·ù¶ÈÅĞ¶ÏãĞÖµ
-    float highFreqRatio = 0.1f;         // ¸ßÆµÕ¼±ÈãĞÖµ
-    std::string outputWavFile = "captured_audio.wav"; // Êä³ö WAV ÎÄ¼şÃû
+    // ç”¨æˆ·å¯è®¾ç½®å‚æ•°
+    float highFreqMin = 10000.0f;       // é«˜é¢‘é˜ˆå€¼
+    float highFreqEpsilon = 0.001f;     // é«˜é¢‘å¹…åº¦åˆ¤æ–­é˜ˆå€¼
+    float highFreqRatio = 0.1f;         // é«˜é¢‘å æ¯”é˜ˆå€¼
+    std::string outputWavFile = "captured_audio.wav"; // è¾“å‡º WAV æ–‡ä»¶å
 
     struct AudioEvent {
-        std::vector<uint8_t> data;   // Ô­Ê¼ÒôÆµÖ¡
-        bool highFreq;               // ÊÇ·ñ¼ì²âµ½¸ßÆµ
-        float angle;                 // Ç¹Éù·½Î»½Ç¶È [-90, +90]
+        std::vector<uint8_t> data;   // åŸå§‹éŸ³é¢‘å¸§
+        bool highFreq;               // æ˜¯å¦æ£€æµ‹åˆ°é«˜é¢‘
+        float angle;                 // æªå£°æ–¹ä½è§’åº¦ [-90, +90]
     };
 
+    HWND mainWindowHandle = nullptr; // ğŸ‘ˆ æ–°å¢æˆå‘˜å˜é‡
     AudioCapture();
     ~AudioCapture();
-
+    void DrawOverlayArc(float angleDeg);
+    void setMainWindowHandle(HWND hwnd); // ğŸ‘ˆ æ–°å¢æ–¹æ³•
     void start();
     void stop();
 
@@ -65,6 +67,7 @@ private:
 
     void captureThread();
     float getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WAVEFORMATEX* pwfx);
+    
     void modelThread();
     void savePcmWavStreaming();
 

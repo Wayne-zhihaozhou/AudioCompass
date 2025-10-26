@@ -260,8 +260,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
  *
  * @param angleDeg 角度（0度为屏幕正上方，顺时针增加）。
  */
-void DrawOverlayArc(float angleDeg) {
-	// 初始化 GDI+
+void AudioCapture::DrawOverlayArc(float angleDeg) {
 	static bool gdiInit = false;
 	static ULONG_PTR gtoken;
 	if (!gdiInit) {
@@ -270,7 +269,6 @@ void DrawOverlayArc(float angleDeg) {
 		gdiInit = true;
 	}
 
-	// 创建或复用窗口
 	if (!g_hwnd) {
 		HINSTANCE hInst = GetModuleHandle(NULL);
 		WNDCLASS wc = { 0 };
@@ -291,25 +289,21 @@ void DrawOverlayArc(float angleDeg) {
 		ShowWindow(g_hwnd, SW_SHOW);
 	}
 
-	// 获取屏幕尺寸
 	int w = GetSystemMetrics(SM_CXSCREEN);
 	int h = GetSystemMetrics(SM_CYSCREEN);
 
-	// 创建透明 Bitmap 绘制
 	Bitmap bmp(w, h, PixelFormat32bppPARGB);
 	Graphics g(&bmp);
 	g.SetSmoothingMode(SmoothingModeAntiAlias);
-	g.Clear(Color(0, 0, 0, 0)); // 透明背景
+	g.Clear(Color(0, 0, 0, 0));
 
-	// 弧形参数
-	const float arcSpan = 50.0f;           // 弧段角度
+	const float arcSpan = 50.0f;
 	const float radius = (float)min(w, h) * 0.25f;
 	const float cx = w * 0.5f;
 	const float cy = h * 0.5f;
 	const float penWidth = max(2.0f, radius * 0.02f);
 
-	// 角度换算（0度向上 → GDI+ 90度向右）
-	float gdiCenterAngle = 90.f - angleDeg;
+	float gdiCenterAngle = 270.0f + angleDeg;
 	float startAngle = gdiCenterAngle - arcSpan / 2.f;
 
 	Pen pen(Color(255, 255, 0, 0), penWidth);
@@ -320,7 +314,14 @@ void DrawOverlayArc(float angleDeg) {
 	RectF rect(cx - radius, cy - radius, radius * 2, radius * 2);
 	g.DrawArc(&pen, rect, startAngle, arcSpan);
 
-	// 输出到窗口
+	// 绘制角度文字
+	FontFamily fontFamily(L"Arial");
+	Font font(&fontFamily, radius * 0.15f, FontStyleBold, UnitPixel);
+	SolidBrush brush(Color(255, 255, 255, 0));  // 白色文字
+	std::wstring angleText = L"Angle: " + std::to_wstring(static_cast<int>(angleDeg)) + L"°";
+	PointF textPos(cx - radius * 0.2f, cy - radius - 30);
+	g.DrawString(angleText.c_str(), -1, &font, textPos, &brush);
+
 	HBITMAP hb;
 	bmp.GetHBITMAP(Color(0, 0, 0, 0), &hb);
 	HDC sdc = GetDC(0);
@@ -338,12 +339,14 @@ void DrawOverlayArc(float angleDeg) {
 	DeleteObject(hb);
 }
 
+
 /**
  * 模型线程
  */
 void AudioCapture::modelThread() {
-
 	while (running || !modelQueue.empty()) {
+		//延迟
+		//Sleep(100);
 		std::unique_lock<std::mutex> lock(modelMutex);
 		modelCV.wait(lock, [this] { return !modelQueue.empty() || !running; });
 
@@ -361,25 +364,16 @@ void AudioCapture::modelThread() {
 				static_cast<uint32_t>(event.data.size() / pwfx->nBlockAlign),
 				pwfx);
 
-			DrawOverlayArc(event.angle);
-
-			MSG msg;
-			while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-				if (msg.message == WM_QUIT) return;
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-
-			// 业务逻辑输出
+			// 把事件发给主线程（例如 PostMessage 或 自定义队列）
 			if (event.highFreq) {
-				if (event.angle < -0.1f) std::cout << "枪声偏左, angle=" << event.angle << "°\n";
-				else if (event.angle > 0.1f) std::cout << "枪声偏右, angle=" << event.angle << "°\n";
-				else std::cout << "枪声居中, angle=" << event.angle << "°\n";
+				PostMessage(mainWindowHandle, WM_USER + 100, 0, reinterpret_cast<LPARAM>(new AudioEvent(event)));
 			}
-
-			// 这里可以进一步把 event 送到模型处理队列
 		}
 	}
+}
+
+void AudioCapture::setMainWindowHandle(HWND hwnd) {
+	mainWindowHandle = hwnd;
 }
 
 /**
