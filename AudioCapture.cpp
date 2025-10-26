@@ -8,11 +8,56 @@
 #pragma comment(lib, "gdiplus.lib")
 
 
-AudioCapture::AudioCapture() {}
+AudioCapture::AudioCapture() {
+	// GDI+ 初始化
+	static bool gdiInit = false;
+	static ULONG_PTR gtoken;
+	if (!gdiInit) {
+		GdiplusStartupInput gi;
+		GdiplusStartup(&gtoken, &gi, NULL);
+		gdiInit = true;
+	}
+
+	// 屏幕中心半径、笔宽
+	int w = GetSystemMetrics(SM_CXSCREEN);
+	int h = GetSystemMetrics(SM_CYSCREEN);
+	radius = min(w, h) * 0.25f;
+	penWidth = max(2.0f, radius * 0.02f);
+
+	initOverlayWindow();
+}
 
 AudioCapture::~AudioCapture() {
 	if (pwfx) CoTaskMemFree(pwfx);
+
 }
+
+LRESULT CALLBACK AudioCapture::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+	if (msg == WM_DESTROY) PostQuitMessage(0);
+	return DefWindowProc(hwnd, msg, wp, lp);
+}
+
+void AudioCapture::initOverlayWindow() {
+	if (g_hwnd) return;
+
+	HINSTANCE hInst = GetModuleHandle(NULL);
+	WNDCLASS wc = { 0 };
+	wc.lpfnWndProc = AudioCapture::WndProc;  // 静态成员
+	wc.hInstance = hInst;
+	wc.lpszClassName = L"ArcOverlay";
+	RegisterClass(&wc);
+
+	int w = GetSystemMetrics(SM_CXSCREEN);
+	int h = GetSystemMetrics(SM_CYSCREEN);
+
+	g_hwnd = CreateWindowEx(
+		WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+		wc.lpszClassName, L"ArcOverlayWnd",
+		WS_POPUP, 0, 0, w, h, 0, 0, hInst, 0);
+
+	ShowWindow(g_hwnd, SW_SHOW);
+}
+
 
 /**
  * 开始捕获音频
@@ -246,8 +291,7 @@ float AudioCapture::getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WA
 
 using namespace Gdiplus;
 
-// 全局窗口句柄（只创建一次）
-static HWND g_hwnd = nullptr;
+
 
 // 窗口过程
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -261,83 +305,69 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
  * @param angleDeg 角度（0度为屏幕正上方，顺时针增加）。
  */
 void AudioCapture::DrawOverlayArc(float angleDeg) {
-	static bool gdiInit = false;
-	static ULONG_PTR gtoken;
-	if (!gdiInit) {
-		GdiplusStartupInput gi;
-		GdiplusStartup(&gtoken, &gi, NULL);
-		gdiInit = true;
-	}
-
-	if (!g_hwnd) {
-		HINSTANCE hInst = GetModuleHandle(NULL);
-		WNDCLASS wc = { 0 };
-		wc.lpfnWndProc = WndProc;
-		wc.hInstance = hInst;
-		wc.lpszClassName = L"ArcOverlay";
-		RegisterClass(&wc);
-
-		int w = GetSystemMetrics(SM_CXSCREEN);
-		int h = GetSystemMetrics(SM_CYSCREEN);
-
-		g_hwnd = CreateWindowEx(
-			WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
-			wc.lpszClassName, L"ArcOverlayWnd",
-			WS_POPUP, 0, 0, w, h,
-			0, 0, hInst, 0);
-
-		ShowWindow(g_hwnd, SW_SHOW);
-	}
-
 	int w = GetSystemMetrics(SM_CXSCREEN);
 	int h = GetSystemMetrics(SM_CYSCREEN);
-
-	Bitmap bmp(w, h, PixelFormat32bppPARGB);
-	Graphics g(&bmp);
-	g.SetSmoothingMode(SmoothingModeAntiAlias);
-	g.Clear(Color(0, 0, 0, 0));
-
 	const float arcSpan = 5.0f;
-	const float radius = (float)min(w, h) * 0.25f;
 	const float cx = w * 0.5f;
 	const float cy = h * 0.5f;
-	const float penWidth = max(2.0f, radius * 0.02f);
 
 	float gdiCenterAngle = 270.0f + angleDeg;
 	float startAngle = gdiCenterAngle - arcSpan / 2.f;
 
-	Pen pen(Color(255, 255, 0, 0), penWidth);
-	pen.SetLineJoin(LineJoinRound);
-	pen.SetStartCap(LineCapRound);
-	pen.SetEndCap(LineCapRound);
+	int size = static_cast<int>(radius + penWidth) * 2;
 
-	RectF rect(cx - radius, cy - radius, radius * 2, radius * 2);
-	g.DrawArc(&pen, rect, startAngle, arcSpan);
+	// 只在尺寸变化时创建 Bitmap/Graphics
+	if (!bmp || cachedSize != size) {
+		delete bmp; delete g;
+		bmp = new Bitmap(size, size, PixelFormat32bppPARGB);
+		g = new Graphics(bmp);
+		cachedSize = size;
+	}
 
-	// 绘制角度文字
-	FontFamily fontFamily(L"Arial");
-	Font font(&fontFamily, radius * 0.1f, FontStyleBold, UnitPixel);
-	SolidBrush brush(Color(255, 255, 255, 0));  // 白色文字
+	g->SetSmoothingMode(SmoothingModeAntiAlias);
+	g->Clear(Color(0, 0, 0, 0));
+
+	if (!pen) {
+		pen = new Pen(Color(255, 255, 0, 0), penWidth);
+		pen->SetLineJoin(LineJoinRound);
+		pen->SetStartCap(LineCapRound);
+		pen->SetEndCap(LineCapRound);
+	}
+
+	if (!font) {
+		FontFamily fontFamily(L"Arial");
+		font = new Font(&fontFamily, radius * 0.08f, FontStyleBold, UnitPixel);
+	}
+
+	if (!brush) brush = new SolidBrush(Color(255, 255, 255, 0));
+
+	// 绘制弧
+	RectF rect(penWidth / 2, penWidth / 2, radius * 2, radius * 2);
+	g->DrawArc(pen, rect, startAngle, arcSpan);
+
+	// 文字固定在 Bitmap 顶部中央
 	std::wstring angleText = L"Angle: " + std::to_wstring(static_cast<int>(angleDeg)) + L"°";
-	PointF textPos(cx - radius * 0.2f, cy - radius - 30);
-	g.DrawString(angleText.c_str(), -1, &font, textPos, &brush);
+	PointF textPos(rect.Width * 0.5f -40, 10); // 顶部中央，-30 是粗略偏移，可调整
+	g->DrawString(angleText.c_str(), -1, font, textPos, brush);
 
+	// 刷新局部窗口
 	HBITMAP hb;
-	bmp.GetHBITMAP(Color(0, 0, 0, 0), &hb);
+	bmp->GetHBITMAP(Color(0, 0, 0, 0), &hb);
 	HDC sdc = GetDC(0);
 	HDC mdc = CreateCompatibleDC(sdc);
 	SelectObject(mdc, hb);
 
-	SIZE sz = { w, h };
-	POINT ptSrc = { 0, 0 };
-	POINT ptDst = { 0, 0 };
-	BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
+	SIZE sz = { size, size };
+	POINT ptSrc = { 0,0 };
+	POINT ptDst = { static_cast<LONG>(cx - size / 2), static_cast<LONG>(cy - size / 2) };
+	BLENDFUNCTION bf = { AC_SRC_OVER,0,255,AC_SRC_ALPHA };
 	UpdateLayeredWindow(g_hwnd, sdc, &ptDst, &sz, mdc, &ptSrc, 0, &bf, ULW_ALPHA);
 
 	DeleteDC(mdc);
 	ReleaseDC(0, sdc);
 	DeleteObject(hb);
 }
+
 
 
 /**

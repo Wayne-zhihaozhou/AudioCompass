@@ -13,6 +13,8 @@
 #include <vector>
 #include <complex>
 #include <string>
+#include <gdiplus.h>
+using namespace Gdiplus;
 
 /**
  * @struct AudioFrame
@@ -27,6 +29,9 @@ struct AudioFrame {
  * 音频捕获、处理和保存类，使用 WASAPI Loopback 捕获系统音频
  */
 class AudioCapture {
+
+
+
 public:
     // 用户可设置参数
     float highFreqMin = 10000.0f;       // 高频阈值
@@ -47,6 +52,22 @@ public:
     void setMainWindowHandle(HWND hwnd); // 👈 新增方法
     void start();
     void stop();
+
+private:
+    void initOverlayWindow();  // 新增窗口初始化
+
+
+    // 缓存 GDI+ 对象
+    Bitmap* bmp = nullptr;
+    Graphics* g = nullptr;
+    Pen* pen = nullptr;
+    Font* font = nullptr;
+    SolidBrush* brush = nullptr;
+    int cachedSize = 0;
+    float radius;
+    float penWidth;
+    HWND g_hwnd = nullptr;  // Overlay 窗口句柄，类成员
+    static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp); // 静态回调
 
 private:
     WAVEFORMATEX* pwfx = nullptr;
