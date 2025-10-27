@@ -30,12 +30,18 @@
     <ClInclude Include="AudioCapture.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Canvas.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="AudioCapture.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Canvas.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

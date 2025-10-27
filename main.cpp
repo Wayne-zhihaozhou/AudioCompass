@@ -1,12 +1,13 @@
 ﻿#include "AudioCapture.h"
 #include <iostream>
 
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
 HWND createTransparentOverlay(HINSTANCE hInst) {
     const wchar_t CLASS_NAME[] = L"TransparentOverlayClass";
 
     WNDCLASS wc = {};
-    wc.lpfnWndProc = DefWindowProc;
+    wc.lpfnWndProc = WndProc;
     wc.hInstance = hInst;
     wc.lpszClassName = CLASS_NAME;
     RegisterClass(&wc);
@@ -40,9 +41,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int) {
 
     AudioCapture ac;
     ac.setMainWindowHandle(hwnd);  // 👈 设置窗口句柄，用于 DrawOverlayArc 绘制
-    ac.highFreqMin = 10000.0f;
-    ac.highFreqEpsilon = 0.001f;
-    ac.highFreqRatio = 0.1f;
+    ac.highFreqMin = 0;// 10000.0f;
+    ac.highFreqEpsilon = 0;//0.001f;
+    ac.highFreqRatio = 0;// 0.1f;
     ac.outputWavFile = "high_freq_audio.wav";
 
     ac.start();

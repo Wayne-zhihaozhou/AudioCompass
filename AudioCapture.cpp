@@ -295,9 +295,22 @@ using namespace Gdiplus;
 
 // 窗口过程
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
-	if (msg == WM_DESTROY) PostQuitMessage(0);
-	return DefWindowProc(hwnd, msg, wp, lp);
+	switch (msg) {
+	case WM_CLOSE:
+		// 用户点击关闭按钮时先销毁窗口
+		DestroyWindow(hwnd);
+		return 0;
+
+	case WM_DESTROY:
+		// 窗口销毁后，退出消息循环
+		PostQuitMessage(0);
+		return 0;
+
+	default:
+		return DefWindowProc(hwnd, msg, wp, lp);
+	}
 }
+
 
 /**
  * @brief 在屏幕中心绘制一个指定角度的弧形线段。
