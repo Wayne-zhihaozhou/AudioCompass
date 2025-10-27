@@ -92,5 +92,8 @@
 
 ---
 
-## 以 PUBG 游戏作为示例演示(待补充)
+## 以 PUBG 游戏作为示例演示
 
+![PUBG示例](PUBG.png)
+
+[效果演示视频链接](https://www.bilibili.com/video/BV1gisSzuEb7/?spm_id_from=333.1368.list.card_archive.click)
