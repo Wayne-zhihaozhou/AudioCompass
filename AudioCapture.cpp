@@ -248,5 +248,71 @@ float AudioCapture::getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WA
     return static_cast<float>(angle);
 }
 
+/**
+ * 保存 WAV 文件（流式）
+ */
+void AudioCapture::savePcmWavStreaming() {
+    if (!pwfx) return;
+
+    std::ofstream ofs(outputWavFile, std::ios::binary);
+    if (!ofs.is_open()) return;
+
+    uint16_t wFormatTag = pwfx->wFormatTag;
+    if (pwfx->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
+        WAVEFORMATEXTENSIBLE* pExt = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(pwfx);
+        if (pExt->SubFormat == KSDATAFORMAT_SUBTYPE_PCM) wFormatTag = WAVE_FORMAT_PCM;
+        else if (pExt->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT) wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+        else return;
+    }
+
+    uint16_t blockAlign = pwfx->nChannels * pwfx->wBitsPerSample / 8;
+    uint32_t avgBytesPerSec = blockAlign * pwfx->nSamplesPerSec;
+
+    uint32_t fmtChunkSize = 16;
+    uint32_t dataSize = 0;
+    uint32_t riffChunkSize = 4 + (8 + fmtChunkSize) + (8 + dataSize);
+
+    ofs.write("RIFF", 4);
+    ofs.write(reinterpret_cast<const char*>(&riffChunkSize), 4);
+    ofs.write("WAVE", 4);
+
+    ofs.write("fmt ", 4);
+    ofs.write(reinterpret_cast<const char*>(&fmtChunkSize), 4);
+    ofs.write(reinterpret_cast<const char*>(&wFormatTag), 2);
+    ofs.write(reinterpret_cast<const char*>(&pwfx->nChannels), 2);
+    ofs.write(reinterpret_cast<const char*>(&pwfx->nSamplesPerSec), 4);
+    ofs.write(reinterpret_cast<const char*>(&avgBytesPerSec), 4);
+    ofs.write(reinterpret_cast<const char*>(&blockAlign), 2);
+    ofs.write(reinterpret_cast<const char*>(&pwfx->wBitsPerSample), 2);
+
+    ofs.write("data", 4);
+    ofs.write(reinterpret_cast<const char*>(&dataSize), 4);
+
+    uint32_t totalDataSize = 0;
+
+    while (running || !saveQueue.empty()) {
+        std::unique_lock<std::mutex> lock(saveMutex);
+        saveCV.wait(lock, [this] { return !saveQueue.empty() || !running; });
+
+        if (!saveQueue.empty()) {
+            auto frame = std::move(saveQueue.front());
+            saveQueue.pop();
+            lock.unlock();
+
+            ofs.write(reinterpret_cast<const char*>(frame.data.data()), frame.data.size());
+            totalDataSize += static_cast<uint32_t>(frame.data.size());
+        }
+    }
+
+    ofs.seekp(4, std::ios::beg);
+    uint32_t riffSize = 4 + (8 + fmtChunkSize) + (8 + totalDataSize);
+    ofs.write(reinterpret_cast<const char*>(&riffSize), 4);
+
+    ofs.seekp(40, std::ios::beg);
+    ofs.write(reinterpret_cast<const char*>(&totalDataSize), 4);
+
+    ofs.close();
+    std::cout << "Saved WAV file: " << outputWavFile << " (streaming mode)" << std::endl;
+}
 
 
