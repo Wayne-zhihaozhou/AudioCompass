@@ -1,5 +1,4 @@
-﻿
-#pragma once
+﻿#pragma once
 #include <windows.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
@@ -13,8 +12,6 @@
 #include <vector>
 #include <complex>
 #include <string>
-#include <gdiplus.h>
-using namespace Gdiplus;
 
 /**
  * @struct AudioFrame
@@ -29,14 +26,11 @@ struct AudioFrame {
  * 音频捕获、处理和保存类，使用 WASAPI Loopback 捕获系统音频
  */
 class AudioCapture {
-
-
-
 public:
     // 用户可设置参数
-    float highFreqMin = 10000.0f;       // 高频阈值
-    float highFreqEpsilon = 0.001f;     // 高频幅度判断阈值
-    float highFreqRatio = 0.1f;         // 高频占比阈值
+    float highFreqMin = 0;// 10000.0f;       // 高频阈值
+    float highFreqEpsilon = 0;// 0.001f;     // 高频幅度判断阈值
+    float highFreqRatio = 0;// 0.1f;         // 高频占比阈值
     std::string outputWavFile = "captured_audio.wav"; // 输出 WAV 文件名
 
     struct AudioEvent {
@@ -45,33 +39,16 @@ public:
         float angle;                 // 枪声方位角度 [-90, +90]
     };
 
-    HWND mainWindowHandle = nullptr; // 👈 新增成员变量
+    HWND mainWindowHandle = nullptr; // 主窗口句柄，用于 PostMessage
     AudioCapture();
     ~AudioCapture();
-    void DrawOverlayArc(float angleDeg);
-    void setMainWindowHandle(HWND hwnd); // 👈 新增方法
+
+    void setMainWindowHandle(HWND hwnd);
     void start();
     void stop();
 
 private:
-    void initOverlayWindow();  // 新增窗口初始化
-
-
-    // 缓存 GDI+ 对象
-    Bitmap* bmp = nullptr;
-    Graphics* g = nullptr;
-    Pen* pen = nullptr;
-    Font* font = nullptr;
-    SolidBrush* brush = nullptr;
-    int cachedSize = 0;
-    float radius;
-    float penWidth;
-    HWND g_hwnd = nullptr;  // Overlay 窗口句柄，类成员
-    static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp); // 静态回调
-
-private:
     WAVEFORMATEX* pwfx = nullptr;
-
     bool running = false;
 
     std::queue<AudioFrame> modelQueue;
@@ -87,11 +64,10 @@ private:
     std::thread saveThreadHandle;
 
     void captureThread();
-    float getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WAVEFORMATEX* pwfx);
-    
     void myThread();
     void savePcmWavStreaming();
 
     void simpleFFT(const std::vector<float>& in, std::vector<std::complex<float>>& out);
     bool hasHighFreqContent(const uint8_t* pData, uint32_t numFrames, WAVEFORMATEX* pwfx);
+    float getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WAVEFORMATEX* pwfx);
 };
