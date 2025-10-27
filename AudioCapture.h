@@ -34,9 +34,9 @@ public:
     std::string outputWavFile = "captured_audio.wav"; // 输出 WAV 文件名
 
     struct AudioEvent {
-        std::vector<uint8_t> data;   // 原始音频帧
-        bool highFreq;               // 是否检测到高频
-        float angle;                 // 枪声方位角度 [-90, +90]
+        std::vector<uint8_t> data;  // 原始音频帧
+        bool highFreq = false;       // 是否检测到高频，默认 false
+        float angle = 0.0f;          // 枪声方位角度 [-90, +90]，默认 0
     };
 
     HWND mainWindowHandle = nullptr; // 主窗口句柄，用于 PostMessage

@@ -4,8 +4,8 @@
 
 using namespace Gdiplus;
 
+// 构造函数，初始化 GDI+ 和窗口
 Canvas::Canvas(HINSTANCE hInst) {
-    // 初始化 GDI+
     static bool gdiInit = false;
     static ULONG_PTR gdiToken;
     if (!gdiInit) {
@@ -22,10 +22,12 @@ Canvas::Canvas(HINSTANCE hInst) {
     initWindow(hInst);
 }
 
+// 析构函数，释放资源
 Canvas::~Canvas() {
     destroy();
 }
 
+// 初始化透明叠加窗口
 void Canvas::initWindow(HINSTANCE hInst) {
     const wchar_t CLASS_NAME[] = L"OverlayCanvasWindow";
 
@@ -48,13 +50,14 @@ void Canvas::initWindow(HINSTANCE hInst) {
     if (!hwnd_) {
         DWORD err = GetLastError();
         MessageBox(nullptr, L"Failed to create window", std::to_wstring(err).c_str(), MB_OK);
+        return;
     }
 
-    SetLayeredWindowAttributes(hwnd_, 0, 255, LWA_ALPHA);
     ShowWindow(hwnd_, SW_SHOW);
     UpdateWindow(hwnd_);
 }
 
+// 销毁窗口和释放资源
 void Canvas::destroy() {
     if (hwnd_) {
         DestroyWindow(hwnd_);
@@ -74,11 +77,13 @@ void Canvas::destroy() {
     brush_ = nullptr;
 }
 
+// 显示窗口
 void Canvas::show() {
     ShowWindow(hwnd_, SW_SHOW);
     UpdateWindow(hwnd_);
 }
 
+// 窗口回调函数
 LRESULT CALLBACK Canvas::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_CLOSE:
@@ -92,15 +97,13 @@ LRESULT CALLBACK Canvas::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
 }
 
-/**
- * @brief 绘制弧形
- */
+// 绘制指定角度的弧形和文字
 void Canvas::drawArc(float angleDeg) {
     int w = GetSystemMetrics(SM_CXSCREEN);
     int h = GetSystemMetrics(SM_CYSCREEN);
-    const float arcSpan = 5.0f;
-    const float cx = w * 0.5f;
-    const float cy = h * 0.5f;
+    const float arcSpan = 5.0f;                  // 弧线跨度
+    const float cx = w * 0.5f;                   // 屏幕中心 X
+    const float cy = h * 0.5f;                   // 屏幕中心 Y
 
     float gdiCenterAngle = 270.0f + angleDeg;
     float startAngle = gdiCenterAngle - arcSpan / 2.f;
@@ -117,7 +120,7 @@ void Canvas::drawArc(float angleDeg) {
     }
 
     g_->SetSmoothingMode(SmoothingModeAntiAlias);
-    g_->Clear(Color(0, 0, 0, 0));  // 完全透明背景
+    g_->Clear(Color(0, 0, 0, 0));
 
     // 初始化画笔
     if (!pen_) {
@@ -128,7 +131,7 @@ void Canvas::drawArc(float angleDeg) {
     }
 
     // 初始化文字画刷
-    if (!brush_) brush_ = new SolidBrush(Color(255, 255, 255, 255));  // 不透明白色文字
+    if (!brush_) brush_ = new SolidBrush(Color(255, 255, 255, 255));
 
     // 初始化字体
     if (!font_) {
@@ -136,7 +139,7 @@ void Canvas::drawArc(float angleDeg) {
         font_ = new Font(&fontFamily, radius_ * 0.08f, FontStyleBold, UnitPixel);
     }
 
-    // 绘制弧
+    // 绘制弧形
     RectF rect(penWidth_ / 2, penWidth_ / 2, radius_ * 2, radius_ * 2);
     g_->DrawArc(pen_, rect, startAngle, arcSpan);
 
@@ -147,8 +150,8 @@ void Canvas::drawArc(float angleDeg) {
 
     // 更新透明叠加窗口
     HBITMAP hb;
-    bmp_->GetHBITMAP(Color(0, 0, 0, 0), &hb);  // 保留透明通道
-    HDC wndDC = GetDC(hwnd_);
+    bmp_->GetHBITMAP(Color(0, 0, 0, 0), &hb);
+    HDC wndDC = GetDC(0);
     HDC memDC = CreateCompatibleDC(wndDC);
     HBITMAP oldBmp = static_cast<HBITMAP>(SelectObject(memDC, hb));
 
@@ -158,6 +161,7 @@ void Canvas::drawArc(float angleDeg) {
     BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
     UpdateLayeredWindow(hwnd_, wndDC, &ptDst, &sz, memDC, &ptSrc, 0, &bf, ULW_ALPHA);
 
+    // 清理 GDI 对象
     SelectObject(memDC, oldBmp);
     DeleteDC(memDC);
     ReleaseDC(hwnd_, wndDC);
