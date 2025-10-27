@@ -1,30 +1,26 @@
 #include "AudioCapture.h"
-
-
+#include <fstream>
 
 AudioCapture::AudioCapture() {}
 
+// 析构函数，释放 WAVEFORMATEX 内存
 AudioCapture::~AudioCapture() {
     if (pwfx) CoTaskMemFree(pwfx);
 }
 
-/**
- * 启动音频捕获与分析线程
- */
+// 启动音频捕获与分析线程
 void AudioCapture::start() {
     running = true;
     captureThreadHandle = std::thread(&AudioCapture::captureThread, this);
 
-    // 等待 pwfx 初始化
+    // 等待 pwfx 初始化完成
     while (pwfx == nullptr) Sleep(10);
 
     modelThreadHandle = std::thread(&AudioCapture::myThread, this);
     //saveThreadHandle = std::thread(&AudioCapture::savePcmWavStreaming, this);
 }
 
-/**
- * 停止捕获音频
- */
+// 停止捕获音频
 void AudioCapture::stop() {
     running = false;
     modelCV.notify_all();
@@ -35,9 +31,7 @@ void AudioCapture::stop() {
     if (saveThreadHandle.joinable()) saveThreadHandle.join();
 }
 
-/**
- * 简单 FFT 实现
- */
+// 简单 FFT 实现
 void AudioCapture::simpleFFT(const std::vector<float>& in, std::vector<std::complex<float>>& out) {
     size_t N = in.size();
     out.resize(N);
@@ -52,9 +46,7 @@ void AudioCapture::simpleFFT(const std::vector<float>& in, std::vector<std::comp
     }
 }
 
-/**
- * 判断是否有高频内容
- */
+// 判断是否有高频内容
 bool AudioCapture::hasHighFreqContent(const uint8_t* pData, uint32_t numFrames, WAVEFORMATEX* pwfx) {
     std::vector<float> mono(numFrames);
 
@@ -76,6 +68,7 @@ bool AudioCapture::hasHighFreqContent(const uint8_t* pData, uint32_t numFrames, 
     size_t highFreqCount = 0;
     size_t aboveThresholdCount = 0;
 
+    // 遍历频谱，统计高频数量
     for (size_t i = 0; i < spectrum.size() / 2; ++i) {
         float freq = i * freqStep;
         if (freq >= highFreqMin) {
@@ -91,9 +84,7 @@ bool AudioCapture::hasHighFreqContent(const uint8_t* pData, uint32_t numFrames, 
     return (ratio >= highFreqRatio);
 }
 
-/**
- * 捕获线程
- */
+// 捕获线程，循环读取音频数据
 void AudioCapture::captureThread() {
     HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     if (FAILED(hr)) return;
@@ -147,12 +138,14 @@ void AudioCapture::captureThread() {
                     frame.data.resize(numFrames * pwfx->nBlockAlign);
                     memcpy(frame.data.data(), pData, numFrames * pwfx->nBlockAlign);
 
+                    // 推送到模型分析队列
                     {
                         std::lock_guard<std::mutex> lock(modelMutex);
                         modelQueue.push(frame);
                     }
                     modelCV.notify_one();
 
+                    // 推送到保存队列
                     {
                         std::lock_guard<std::mutex> lock(saveMutex);
                         saveQueue.push(frame);
@@ -170,6 +163,7 @@ void AudioCapture::captureThread() {
         Sleep(1);
     }
 
+    // 清理 COM 资源
     pAudioClient->Stop();
     pCaptureClient->Release();
     pAudioClient->Release();
@@ -178,9 +172,7 @@ void AudioCapture::captureThread() {
     CoUninitialize();
 }
 
-/**
- * 模型线程：分析高频 & 方位角
- */
+// 模型线程：分析高频 & 方位角
 void AudioCapture::myThread() {
     while (running || !modelQueue.empty()) {
         std::unique_lock<std::mutex> lock(modelMutex);
@@ -200,6 +192,7 @@ void AudioCapture::myThread() {
                 static_cast<uint32_t>(event.data.size() / pwfx->nBlockAlign),
                 pwfx);
 
+            // 高频音事件通知主窗口
             if (event.highFreq) {
                 PostMessage(mainWindowHandle, WM_USER + 100, 0, reinterpret_cast<LPARAM>(new AudioEvent(event)));
             }
@@ -207,13 +200,12 @@ void AudioCapture::myThread() {
     }
 }
 
+// 设置主窗口句柄
 void AudioCapture::setMainWindowHandle(HWND hwnd) {
     mainWindowHandle = hwnd;
 }
 
-/**
- * 根据左右声道能量计算方位
- */
+// 根据左右声道能量计算方位
 float AudioCapture::getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WAVEFORMATEX* pwfx) {
     if (!pData || !pwfx || pwfx->nChannels < 2 || numFrames == 0) return 0.0f;
 
@@ -244,13 +236,11 @@ float AudioCapture::getGunshotAngle(const uint8_t* pData, uint32_t numFrames, WA
     double dbDiff = 20.0 * std::log10((rmsRight + 1e-9) / (rmsLeft + 1e-9));
     double maxDb = 20.0;
     double angle = (dbDiff / maxDb) * 90.0;
-    angle = angle = (angle < -90.0) ? -90.0 : ((angle > 90.0) ? 90.0 : angle);
+    angle = (angle < -90.0) ? -90.0 : ((angle > 90.0) ? 90.0 : angle);
     return static_cast<float>(angle);
 }
 
-/**
- * 保存 WAV 文件（流式）
- */
+// 保存 WAV 文件（流式写入）
 void AudioCapture::savePcmWavStreaming() {
     if (!pwfx) return;
 
@@ -272,6 +262,7 @@ void AudioCapture::savePcmWavStreaming() {
     uint32_t dataSize = 0;
     uint32_t riffChunkSize = 4 + (8 + fmtChunkSize) + (8 + dataSize);
 
+    // 写 WAV 头
     ofs.write("RIFF", 4);
     ofs.write(reinterpret_cast<const char*>(&riffChunkSize), 4);
     ofs.write("WAVE", 4);
@@ -290,6 +281,7 @@ void AudioCapture::savePcmWavStreaming() {
 
     uint32_t totalDataSize = 0;
 
+    // 循环写入 PCM 数据
     while (running || !saveQueue.empty()) {
         std::unique_lock<std::mutex> lock(saveMutex);
         saveCV.wait(lock, [this] { return !saveQueue.empty() || !running; });
@@ -304,6 +296,7 @@ void AudioCapture::savePcmWavStreaming() {
         }
     }
 
+    // 更新 WAV 文件头长度
     ofs.seekp(4, std::ios::beg);
     uint32_t riffSize = 4 + (8 + fmtChunkSize) + (8 + totalDataSize);
     ofs.write(reinterpret_cast<const char*>(&riffSize), 4);
