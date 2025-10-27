@@ -1,6 +1,8 @@
 #include "Canvas.h"
 #include <string>
 #include <gdiplus.h>
+#include <chrono>
+#include <cmath>
 
 using namespace Gdiplus;
 
@@ -97,16 +99,12 @@ LRESULT CALLBACK Canvas::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
 }
 
-// 绘制指定角度的弧形和文字
+// 绘制弧形和残影
 void Canvas::drawArc(float angleDeg) {
     int w = GetSystemMetrics(SM_CXSCREEN);
     int h = GetSystemMetrics(SM_CYSCREEN);
-    const float arcSpan = 5.0f;                  // 弧线跨度
-    const float cx = w * 0.5f;                   // 屏幕中心 X
-    const float cy = h * 0.5f;                   // 屏幕中心 Y
-
-    float gdiCenterAngle = 270.0f + angleDeg;
-    float startAngle = gdiCenterAngle - arcSpan / 2.f;
+    const float cx = w * 0.5f;
+    const float cy = h * 0.5f;
 
     int size = static_cast<int>(radius_ + penWidth_) * 2;
 
@@ -122,26 +120,56 @@ void Canvas::drawArc(float angleDeg) {
     g_->SetSmoothingMode(SmoothingModeAntiAlias);
     g_->Clear(Color(0, 0, 0, 0));
 
-    // 初始化画笔
-    if (!pen_) {
-        pen_ = new Pen(Color(255, 255, 0, 0), penWidth_);
-        pen_->SetLineJoin(LineJoinRound);
-        pen_->SetStartCap(LineCapRound);
-        pen_->SetEndCap(LineCapRound);
-    }
+    // 实时弧形画笔
+    Pen livePen(liveColor);
+    livePen.SetWidth(penWidth_);
+    livePen.SetLineJoin(LineJoinRound);
+    livePen.SetStartCap(LineCapRound);
+    livePen.SetEndCap(LineCapRound);
 
-    // 初始化文字画刷
-    if (!brush_) brush_ = new SolidBrush(Color(255, 255, 255, 255));
-
-    // 初始化字体
+    // 初始化文字画刷和字体
+    if (!brush_) brush_ = new SolidBrush(textColor);
     if (!font_) {
         FontFamily fontFamily(L"Arial");
         font_ = new Font(&fontFamily, radius_ * 0.08f, FontStyleBold, UnitPixel);
     }
 
-    // 绘制弧形
+    // 当前时间
+    ULONGLONG now = GetTickCount64();
+
+    // 超过阈值加入残影
+    if (fabs(angleDeg) > trailAngleThreshold) {
+        arcTrails_.push_back({ angleDeg, now });
+    }
+
+    // 绘制残影（红色 + alpha 衰减）
+    for (auto it = arcTrails_.begin(); it != arcTrails_.end();) {
+        float age = static_cast<float>(now - it->ts) / 1000.0f;
+        if (age > trailDuration) {
+            it = arcTrails_.erase(it);
+            continue;
+        }
+
+        float alpha = 255.0f * (1.0f - age / trailDuration);
+        Pen trailPen(Color(static_cast<BYTE>(alpha),
+            trailColor.GetRed(),
+            trailColor.GetGreen(),
+            trailColor.GetBlue()), penWidth_);
+        trailPen.SetLineJoin(LineJoinRound);
+        trailPen.SetStartCap(LineCapRound);
+        trailPen.SetEndCap(LineCapRound);
+
+        float gdiAngle = 270.0f + it->angle;
+        RectF rect(penWidth_ / 2, penWidth_ / 2, radius_ * 2, radius_ * 2);
+        g_->DrawArc(&trailPen, rect, gdiAngle - arcSpan / 2.f, arcSpan);
+
+        ++it;
+    }
+
+    // 绘制实时弧形
+    float gdiCenterAngle = 270.0f + angleDeg;
     RectF rect(penWidth_ / 2, penWidth_ / 2, radius_ * 2, radius_ * 2);
-    g_->DrawArc(pen_, rect, startAngle, arcSpan);
+    g_->DrawArc(&livePen, rect, gdiCenterAngle - arcSpan / 2.f, arcSpan);
 
     // 绘制文字
     std::wstring angleText = L"Angle: " + std::to_wstring(static_cast<int>(angleDeg)) + L"°";
@@ -161,10 +189,8 @@ void Canvas::drawArc(float angleDeg) {
     BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
     UpdateLayeredWindow(hwnd_, wndDC, &ptDst, &sz, memDC, &ptSrc, 0, &bf, ULW_ALPHA);
 
-    // 清理 GDI 对象
     SelectObject(memDC, oldBmp);
     DeleteDC(memDC);
     ReleaseDC(hwnd_, wndDC);
     DeleteObject(hb);
 }
-

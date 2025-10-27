@@ -18,7 +18,7 @@ void AudioCapture::start() {
     while (pwfx == nullptr) Sleep(10);
 
     modelThreadHandle = std::thread(&AudioCapture::myThread, this);
-    //saveThreadHandle = std::thread(&AudioCapture::savePcmWavStreaming, this);
+    //saveThreadHandle = std::thread(&AudioCapture::savePcmWavStreaming, this);//‘› ±πÿ±’
 }
 
 // Õ£÷π≤∂ªÒ“Ù∆µ
