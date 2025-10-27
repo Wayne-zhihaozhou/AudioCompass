@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{b43aaa1f-bb67-4ae3-9990-1cfdcf2145b4}</ProjectGuid>
+    <ProjectGuid>{5A8B16BF-8C68-4767-B11C-598095113FEA}</ProjectGuid>
     <RootNamespace>compass</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>AudioCompass</ProjectName>
@@ -143,6 +143,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\compass.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
