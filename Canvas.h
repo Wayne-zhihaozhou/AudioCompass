@@ -19,11 +19,12 @@ public:
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp); // 窗口回调
 
     // 用户可配置参数
-    float trailAngleThreshold = 15.0f;      // 残影触发阈值（度）
-    float trailDuration = 1.0f;             // 残影保留时间（秒）
+    float trailAngleThreshold = 10.0f;      // 残影触发阈值（度）
+    float trailBaseDuration = 0.2f;// 残影基础持续时间（秒）
+    float trailMaxDuration = 1.0f;// 残影最大持续时间（秒）
     Color liveColor = Color(255, 255, 255, 0);   // 实时弧形颜色
     Color trailColor = Color(255, 255, 0, 0);    // 残影初始颜色
-    float arcSpan = 1.0f;                   // 弧线跨度（度）
+    float arcSpan = 2.0f;                   // 弧线跨度（度）
     Color textColor = Color(255, 255, 255, 0); // 文字颜色，默认白色
 
 private:
@@ -42,7 +43,9 @@ private:
     struct ArcTrail {
         float angle;        // 弧形角度
         ULONGLONG ts;       // 创建时间（毫秒）
+        float duration;     // 动态残影持续时间
     };
+
 
     std::vector<ArcTrail> arcTrails_;  // 保存残影
 };
