@@ -24,6 +24,7 @@
     <ProjectGuid>{b43aaa1f-bb67-4ae3-9990-1cfdcf2145b4}</ProjectGuid>
     <RootNamespace>compass</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>AudioCompass</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -116,6 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>include/;res/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -123,24 +125,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AudioCapture.h" />
-    <ClInclude Include="Canvas.h" />
-    <ClInclude Include="compass.h" />
-    <ClInclude Include="framework.h" />
-    <ClInclude Include="Resource.h" />
-    <ClInclude Include="targetver.h" />
+    <ClCompile Include="src\AudioCapture.cpp" />
+    <ClCompile Include="src\Canvas.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AudioCapture.cpp" />
-    <ClCompile Include="Canvas.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClInclude Include="include\AudioCapture.h" />
+    <ClInclude Include="include\Canvas.h" />
+    <ClInclude Include="include\compass.h" />
+    <ClInclude Include="include\framework.h" />
+    <ClInclude Include="include\Resource.h" />
+    <ClInclude Include="include\targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="compass.rc" />
+    <Image Include="res\compass.ico" />
+    <Image Include="res\small.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="compass.ico" />
-    <Image Include="small.ico" />
+    <ResourceCompile Include="res\compass.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
