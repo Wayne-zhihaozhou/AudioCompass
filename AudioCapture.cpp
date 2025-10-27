@@ -1,5 +1,6 @@
 #include "AudioCapture.h"
 #include <fstream>
+#include <iostream>
 
 AudioCapture::AudioCapture() {}
 
