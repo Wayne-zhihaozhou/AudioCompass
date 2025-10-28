@@ -1,4 +1,4 @@
-#include "Canvas.h"
+ï»¿#include "Canvas.h"
 #include <string>
 #include <gdiplus.h>
 #include <chrono>
@@ -6,7 +6,7 @@
 
 using namespace Gdiplus;
 
-// ¹¹Ôìº¯Êı£¬³õÊ¼»¯ GDI+ ºÍ´°¿Ú
+// æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ– GDI+ å’Œçª—å£
 Canvas::Canvas(HINSTANCE hInst) {
 	static bool gdiInit = false;
 	static ULONG_PTR gdiToken;
@@ -24,12 +24,12 @@ Canvas::Canvas(HINSTANCE hInst) {
 	initWindow(hInst);
 }
 
-// Îö¹¹º¯Êı£¬ÊÍ·Å×ÊÔ´
+// ææ„å‡½æ•°ï¼Œé‡Šæ”¾èµ„æº
 Canvas::~Canvas() {
 	destroy();
 }
 
-// ³õÊ¼»¯Í¸Ã÷µş¼Ó´°¿Ú
+// åˆå§‹åŒ–é€æ˜å åŠ çª—å£
 void Canvas::initWindow(HINSTANCE hInst) {
 	const wchar_t CLASS_NAME[] = L"OverlayCanvasWindow";
 
@@ -59,7 +59,7 @@ void Canvas::initWindow(HINSTANCE hInst) {
 	UpdateWindow(hwnd_);
 }
 
-// Ïú»Ù´°¿ÚºÍÊÍ·Å×ÊÔ´
+// é”€æ¯çª—å£å’Œé‡Šæ”¾èµ„æº
 void Canvas::destroy() {
 	if (hwnd_) {
 		DestroyWindow(hwnd_);
@@ -79,13 +79,13 @@ void Canvas::destroy() {
 	brush_ = nullptr;
 }
 
-// ÏÔÊ¾´°¿Ú
+// æ˜¾ç¤ºçª—å£
 void Canvas::show() {
 	ShowWindow(hwnd_, SW_SHOW);
 	UpdateWindow(hwnd_);
 }
 
-// ´°¿Ú»Øµ÷º¯Êı
+// çª—å£å›è°ƒå‡½æ•°
 LRESULT CALLBACK Canvas::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 	switch (msg) {
 	case WM_CLOSE:
@@ -99,105 +99,203 @@ LRESULT CALLBACK Canvas::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 	}
 }
 
-// »æÖÆ»¡ĞÎºÍ²ĞÓ°
+// ç»˜åˆ¶å¼§å½¢å’Œæ®‹å½±
+// ç»˜åˆ¶å¼§å½¢å’Œæ®‹å½±
 void Canvas::drawArc(float angleDeg) {
-	int w = GetSystemMetrics(SM_CXSCREEN);
-	int h = GetSystemMetrics(SM_CYSCREEN);
-	const float cx = w * 0.5f;
-	const float cy = h * 0.5f;
+    int w = GetSystemMetrics(SM_CXSCREEN);
+    int h = GetSystemMetrics(SM_CYSCREEN);
+    const float cx = w * 0.5f;
+    const float cy = h * 0.5f;
 
-	int size = static_cast<int>(radius_ + penWidth_) * 2;
+    int size = static_cast<int>(radius_ + penWidth_) * 2;
 
-	// ´´½¨»ò¸üĞÂ Bitmap/Graphics
-	if (!bmp_ || cachedSize_ != size) {
-		delete bmp_;
-		delete g_;
-		bmp_ = new Bitmap(size, size, PixelFormat32bppPARGB);
-		g_ = new Graphics(bmp_);
-		cachedSize_ = size;
-	}
+    // åˆ›å»ºæˆ–æ›´æ–° Bitmap/Graphics
+    if (!bmp_ || cachedSize_ != size) {
+        delete bmp_;
+        delete g_;
+        bmp_ = new Bitmap(size, size, PixelFormat32bppPARGB);
+        g_ = new Graphics(bmp_);
+        cachedSize_ = size;
+    }
 
-	g_->SetSmoothingMode(SmoothingModeAntiAlias);
-	g_->Clear(Color(0, 0, 0, 0));
+    g_->SetSmoothingMode(SmoothingModeAntiAlias);
+    g_->Clear(Color(0, 0, 0, 0));
 
-	// ÊµÊ±»¡ĞÎ»­±Ê
-	Pen livePen(liveColor);
-	livePen.SetWidth(penWidth_);
-	livePen.SetLineJoin(LineJoinRound);
-	livePen.SetStartCap(LineCapRound);
-	livePen.SetEndCap(LineCapRound);
+    // å®æ—¶å¼§å½¢ç”»ç¬”
+    Pen livePen(liveColor);
+    livePen.SetWidth(penWidth_);
+    livePen.SetLineJoin(LineJoinRound);
+    livePen.SetStartCap(LineCapRound);
+    livePen.SetEndCap(LineCapRound);
 
-	// ³õÊ¼»¯ÎÄ×Ö»­Ë¢ºÍ×ÖÌå
-	if (!brush_) brush_ = new SolidBrush(textColor);
-	if (!font_) {
-		FontFamily fontFamily(L"Arial");
-		font_ = new Font(&fontFamily, radius_ * 0.08f, FontStyleBold, UnitPixel);
-	}
+    // åˆå§‹åŒ–æ–‡å­—ç”»åˆ·å’Œå­—ä½“
+    if (!brush_) brush_ = new SolidBrush(textColor);
+    if (!font_) {
+        FontFamily fontFamily(L"Arial");
+        font_ = new Font(&fontFamily, radius_ * 0.08f, FontStyleBold, UnitPixel);
+    }
 
-	// µ±Ç°Ê±¼ä
-	ULONGLONG now = GetTickCount64();
+    // å½“å‰æ—¶é—´
+    ULONGLONG now = GetTickCount64();
 
-// Ö»ÔÚ½Ç¶È³¬¹ıãĞÖµÊ±¼ÆËã²ĞÓ°³ÖĞøÊ±¼ä²¢¼ÓÈë¶ÓÁĞ
-	if (fabs(angleDeg) > trailAngleThreshold) {
-		//float dynamicTrailDuration = trailBaseDuration * (fabs(angleDeg) / trailAngleThreshold);
-		//if (dynamicTrailDuration > trailMaxDuration) dynamicTrailDuration = trailMaxDuration; // ×î´óÊ±¼äÏŞÖÆ
-		//if (dynamicTrailDuration < trailBaseDuration) dynamicTrailDuration = trailBaseDuration; // ×îĞ¡Ê±¼ä±£Ö¤
-		// ½«½Ç¶ÈÓ³Éäµ½²ĞÓ°³ÖĞøÊ±¼ä
-		float normalizedAngle = min(fabs(angleDeg), 90.0f) / 90.0f; // 0~1
-		float dynamicTrailDuration = trailBaseDuration + normalizedAngle * (trailMaxDuration - trailBaseDuration);
+    // åªåœ¨è§’åº¦è¶…è¿‡é˜ˆå€¼æ—¶è®¡ç®—æ®‹å½±æŒç»­æ—¶é—´å¹¶åŠ å…¥é˜Ÿåˆ—
+    if (fabs(angleDeg) > trailAngleThreshold) {
+        float normalizedAngle = min(fabs(angleDeg), 90.0f) / 90.0f; // 0~1
+        float dynamicTrailDuration = trailBaseDuration + normalizedAngle * (trailMaxDuration - trailBaseDuration);
+        arcTrails_.push_back({ angleDeg, now, dynamicTrailDuration });
+    }
 
-		arcTrails_.push_back({ angleDeg, now, dynamicTrailDuration });
-	}
+    // ç»˜åˆ¶æ®‹å½±ï¼ˆçº¢è‰² + alpha è¡°å‡ï¼‰
+    for (auto it = arcTrails_.begin(); it != arcTrails_.end();) {
+        float age = static_cast<float>(now - it->ts) / 1000.0f;
+        if (age > it->duration) {
+            it = arcTrails_.erase(it);
+            continue;
+        }
 
-	// »æÖÆ²ĞÓ°£¨ºìÉ« + alpha Ë¥¼õ£©
-	for (auto it = arcTrails_.begin(); it != arcTrails_.end();) {
-		float age = static_cast<float>(now - it->ts) / 1000.0f;
-		if (age > it->duration) {
-			it = arcTrails_.erase(it);
-			continue;
-		}
+        float alpha = 255.0f * (1.0f - age / it->duration);
+        Pen trailPen(Color(static_cast<BYTE>(alpha),
+            trailColor.GetRed(),
+            trailColor.GetGreen(),
+            trailColor.GetBlue()), penWidth_);
+        trailPen.SetLineJoin(LineJoinRound);
+        trailPen.SetStartCap(LineCapRound);
+        trailPen.SetEndCap(LineCapRound);
 
-		float alpha = 255.0f * (1.0f - age / it->duration);
-		Pen trailPen(Color(static_cast<BYTE>(alpha),
-			trailColor.GetRed(),
-			trailColor.GetGreen(),
-			trailColor.GetBlue()), penWidth_);
-		trailPen.SetLineJoin(LineJoinRound);
-		trailPen.SetStartCap(LineCapRound);
-		trailPen.SetEndCap(LineCapRound);
+        float gdiAngle = 270.0f + it->angle;
+        RectF rect(penWidth_ / 2, penWidth_ / 2, radius_ * 2, radius_ * 2);
+        g_->DrawArc(&trailPen, rect, gdiAngle - arcSpan / 2.f, arcSpan);
 
-		float gdiAngle = 270.0f + it->angle;
-		RectF rect(penWidth_ / 2, penWidth_ / 2, radius_ * 2, radius_ * 2);
-		g_->DrawArc(&trailPen, rect, gdiAngle - arcSpan / 2.f, arcSpan);
+        ++it;
+    }
 
-		++it;
-	}
+    // ç»˜åˆ¶å®æ—¶å¼§å½¢
+    float gdiCenterAngle = 270.0f + angleDeg;
+    RectF rect(penWidth_ / 2, penWidth_ / 2, radius_ * 2, radius_ * 2);
+    g_->DrawArc(&livePen, rect, gdiCenterAngle - arcSpan / 2.f, arcSpan);
 
-	// »æÖÆÊµÊ±»¡ĞÎ
-	float gdiCenterAngle = 270.0f + angleDeg;
-	RectF rect(penWidth_ / 2, penWidth_ / 2, radius_ * 2, radius_ * 2);
-	g_->DrawArc(&livePen, rect, gdiCenterAngle - arcSpan / 2.f, arcSpan);
+    // ç»˜åˆ¶æ–‡å­—
+    std::wstring angleText = L"Angle: " + std::to_wstring(static_cast<int>(angleDeg)) + L"Â°";
+    PointF textPos(rect.Width * 0.5f - 40, 10);
+    g_->DrawString(angleText.c_str(), -1, font_, textPos, brush_);
 
-	// »æÖÆÎÄ×Ö
-	std::wstring angleText = L"Angle: " + std::to_wstring(static_cast<int>(angleDeg)) + L"¡ã";
-	PointF textPos(rect.Width * 0.5f - 40, 10);
-	g_->DrawString(angleText.c_str(), -1, font_, textPos, brush_);
+    // æ›´æ–°é€æ˜å åŠ çª—å£
+    HBITMAP hb = nullptr;
+    if (bmp_->GetHBITMAP(Color(0, 0, 0, 0), &hb) != Ok || hb == nullptr) {
+        OutputDebugStringW(L"[Canvas] GetHBITMAP failed or returned null\n");
+        return;
+    }
 
-	// ¸üĞÂÍ¸Ã÷µş¼Ó´°¿Ú
-	HBITMAP hb;
-	bmp_->GetHBITMAP(Color(0, 0, 0, 0), &hb);
-	HDC wndDC = GetDC(0);
-	HDC memDC = CreateCompatibleDC(wndDC);
-	HBITMAP oldBmp = static_cast<HBITMAP>(SelectObject(memDC, hb));
+    // ä½¿ç”¨å±å¹• DCï¼ˆGetDC(NULL)ï¼‰å¹¶é…å¯¹ ReleaseDC(NULL,...)
+    HDC wndDC = GetDC(NULL);
+    if (!wndDC) {
+        OutputDebugStringW(L"[Canvas] GetDC(NULL) failed\n");
+        DeleteObject(hb);
+        return;
+    }
 
-	POINT ptDst = { static_cast<LONG>(cx - size / 2), static_cast<LONG>(cy - size / 2) };
-	SIZE sz = { size, size };
-	POINT ptSrc = { 0, 0 };
-	BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
-	UpdateLayeredWindow(hwnd_, wndDC, &ptDst, &sz, memDC, &ptSrc, 0, &bf, ULW_ALPHA);
+    HDC memDC = CreateCompatibleDC(wndDC);
+    HBITMAP oldBmp = static_cast<HBITMAP>(SelectObject(memDC, hb));
 
-	SelectObject(memDC, oldBmp);
-	DeleteDC(memDC);
-	ReleaseDC(hwnd_, wndDC);
-	DeleteObject(hb);
+    POINT ptDst = { static_cast<LONG>(cx - size / 2), static_cast<LONG>(cy - size / 2) };
+    SIZE sz = { size, size };
+    POINT ptSrc = { 0, 0 };
+    BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
+
+    BOOL ok = UpdateLayeredWindow(hwnd_, wndDC, &ptDst, &sz, memDC, &ptSrc, 0, &bf, ULW_ALPHA);
+    if (!ok) {
+        DWORD err = GetLastError();
+        wchar_t buf[128];
+        swprintf_s(buf, L"[Canvas] UpdateLayeredWindow failed in drawArc: %u\n", err);
+        OutputDebugStringW(buf);
+        // ä¸æŠŠ hasContent_ ç½® trueï¼Œè¡¨ç¤ºä¸Šä¼ å¤±è´¥
+    }
+    else {
+        hasContent_ = true; // åªæœ‰åœ¨æˆåŠŸä¸Šä¼ åæ‰è®¤ä¸ºå±å¹•æœ‰å†…å®¹
+    }
+
+    // cleanup
+    SelectObject(memDC, oldBmp);
+    DeleteDC(memDC);
+    ReleaseDC(NULL, wndDC);
+    DeleteObject(hb);
+}
+
+
+// æ¸…ç©ºå±å¹•ï¼ˆåªåœ¨å½“å‰ç¡®å®æœ‰å†…å®¹æ—¶æ‰§è¡Œä¸Šä¼ é€æ˜ä½å›¾ï¼‰
+void Canvas::clear() {
+    if (!hwnd_) {
+        wchar_t buf[128];
+        swprintf_s(buf, 128, L"highFreq = %d, angle = %.2f", hwnd_, hwnd_);
+        MessageBox(nullptr, buf, L"hwnd_()", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+       
+
+    // å¦‚æœæ²¡æœ‰å†…å®¹ï¼ˆä¸Šæ¬¡å·²ç»æ˜¯ç©ºï¼‰ï¼Œåˆ™æ— éœ€å†æ¬¡æ¸…ç†
+    if (!hasContent_ && arcTrails_.empty()) {
+        return;
+    }
+
+    int w = GetSystemMetrics(SM_CXSCREEN);
+    int h = GetSystemMetrics(SM_CYSCREEN);
+
+    int size = static_cast<int>(radius_ + penWidth_) * 2;
+    const float cx = w * 0.5f;
+    const float cy = h * 0.5f;
+
+    // ç¡®ä¿ bitmap/graphics å­˜åœ¨
+    if (!bmp_ || cachedSize_ != size) {
+        delete bmp_;
+        delete g_;
+        bmp_ = new Bitmap(size, size, PixelFormat32bppPARGB);
+        g_ = new Graphics(bmp_);
+        cachedSize_ = size;
+    }
+
+    // æ¸…ç©º Bitmap å†…å®¹ï¼ˆå…¨é€æ˜ï¼‰
+    g_->SetSmoothingMode(SmoothingModeNone);
+    g_->Clear(Color(0, 0, 0, 0));
+
+    // ç”Ÿæˆé€æ˜ä½å›¾ä¸Šä¼ 
+    HBITMAP hb = nullptr;
+    if (bmp_->GetHBITMAP(Color(0, 0, 0, 0), &hb) != Ok || hb == nullptr) {
+        OutputDebugStringW(L"[Canvas] GetHBITMAP failed in clear\n");
+        return;
+    }
+
+    HDC wndDC = GetDC(NULL);
+    if (!wndDC) {
+        OutputDebugStringW(L"[Canvas] GetDC(NULL) failed in clear\n");
+        DeleteObject(hb);
+        return;
+    }
+
+    HDC memDC = CreateCompatibleDC(wndDC);
+    HBITMAP oldBmp = static_cast<HBITMAP>(SelectObject(memDC, hb));
+
+    POINT ptDst = { static_cast<LONG>(cx - size / 2), static_cast<LONG>(cy - size / 2) };
+    SIZE sz = { size, size };
+    POINT ptSrc = { 0, 0 };
+    BLENDFUNCTION bf = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
+
+    BOOL ok = UpdateLayeredWindow(hwnd_, wndDC, &ptDst, &sz, memDC, &ptSrc, 0, &bf, ULW_ALPHA);
+    if (!ok) {
+        DWORD err = GetLastError();
+        wchar_t buf[128];
+        swprintf_s(buf, L"[Canvas] UpdateLayeredWindow failed in clear: %u\n", err);
+        OutputDebugStringW(buf);
+        // ä¸Šä¼ å¤±è´¥åˆ™ä¿ç•™ hasContent_ çš„åŸå€¼ï¼ˆä»¥ä¾¿åç»­é‡è¯•ï¼‰
+    }
+    else {
+        // ä¸Šä¼ æˆåŠŸï¼šæ ‡è®°ä¸ºç©ºï¼Œå¹¶æ¸…é™¤è½¨è¿¹
+        hasContent_ = false;
+        arcTrails_.clear();
+    }
+
+    // cleanup
+    SelectObject(memDC, oldBmp);
+    DeleteDC(memDC);
+    ReleaseDC(NULL, wndDC);
+    DeleteObject(hb);
 }

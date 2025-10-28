@@ -20,9 +20,9 @@ struct AudioFrame {
 class AudioCapture {
 public:
     // 高频检测参数
-    float highFreqMin = 0;        // 高频起始频率阈值
-    float highFreqEpsilon = 0;    // 高频幅度判断阈值
-    float highFreqRatio = 0;      // 高频占比阈值
+    float highFreqMin = 10000.0f;        // 高频起始频率阈值
+    float highFreqEpsilon = 0.001f;    // 高频幅度判断阈值
+    float highFreqRatio = 0.1f;      // 高频占比阈值
     std::string outputWavFile = "captured_audio.wav";  // 输出 WAV 文件名
 
     // 高频音事件结构

@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+    <None Include="AudioCompass.exe" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">

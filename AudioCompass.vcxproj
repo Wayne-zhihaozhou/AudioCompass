@@ -145,6 +145,7 @@
     <ResourceCompile Include="res\compass.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="AudioCompass.exe" />
     <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

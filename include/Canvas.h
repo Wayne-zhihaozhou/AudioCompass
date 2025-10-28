@@ -13,6 +13,7 @@ public:
 
     HWND getHwnd() const { return hwnd_; } // 获取窗口句柄
     void drawArc(float angleDeg);          // 绘制指定角度的弧形和文字
+    void clear();
     void show();                           // 显示窗口
     void destroy();                        // 销毁窗口和释放资源
 
@@ -31,6 +32,7 @@ private:
     void initWindow(HINSTANCE hInst);      // 初始化透明叠加窗口
 
     HWND hwnd_ = nullptr;                  // 窗口句柄
+    bool hasContent_ = false;              // 当前是否有绘制内容
     Bitmap* bmp_ = nullptr;                // 绘图 Bitmap
     Graphics* g_ = nullptr;                // 绘图对象
     Pen* pen_ = nullptr;                   // 绘制实时弧线画笔

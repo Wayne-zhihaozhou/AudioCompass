@@ -13,7 +13,10 @@ int WINAPI WinMain(
     // 创建全局互斥量，防止程序多开
     HANDLE _mutex = CreateMutex(nullptr, TRUE, L"MyUniqueAudioCaptureAppMutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        MessageBox(nullptr, L"程序已运行，请勿重复启动。", L"提示", MB_OK | MB_ICONWARNING);
+        MessageBox(nullptr, 
+            L"程序已运行，请勿重复启动。"
+            L"若需要关闭程序，请打开任务管理器，在后台查找AudioCompass.exe并手动结束。",
+            L"提示", MB_OK | MB_ICONWARNING);
         return 0;  // 程序退出
     }
 
@@ -46,11 +49,30 @@ int WINAPI WinMain(
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (msg.message == WM_USER + 100) {
             auto event = reinterpret_cast<AudioCapture::AudioEvent*>(msg.lParam);
-            if (event->highFreq && g_canvas) {
-                g_canvas->drawArc(event->angle);
+
+            wchar_t buf[256];
+            swprintf_s(buf, 256, L"[WinMain] Received event: highFreq=%d, angle=%.2f\n",
+                event->highFreq, event->angle);
+            OutputDebugStringW(buf);
+
+            if (g_canvas) {
+                if (event->highFreq) {
+                    g_canvas->drawArc(event->angle);
+                    OutputDebugStringW(L"[WinMain] drawArc called\n");
+                }
+                else {
+                    OutputDebugStringW(L"[WinMain] clear called\n");
+                    g_canvas->clear();
+                }
             }
+
             delete event;
         }
+        else {
+            // 其他消息
+            OutputDebugStringW(L"[WinMain] Other message received\n");
+        }
+
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
