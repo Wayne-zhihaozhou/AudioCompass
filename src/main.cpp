@@ -49,30 +49,14 @@ int WINAPI WinMain(
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (msg.message == WM_USER + 100) {
             auto event = reinterpret_cast<AudioCapture::AudioEvent*>(msg.lParam);
-
-            wchar_t buf[256];
-            swprintf_s(buf, 256, L"[WinMain] Received event: highFreq=%d, angle=%.2f\n",
-                event->highFreq, event->angle);
-            OutputDebugStringW(buf);
-
-            if (g_canvas) {
-                if (event->highFreq) {
-                    g_canvas->drawArc(event->angle);
-                    OutputDebugStringW(L"[WinMain] drawArc called\n");
-                }
-                else {
-                    OutputDebugStringW(L"[WinMain] clear called\n");
-                    g_canvas->clear();
-                }
+            if (event->highFreq && g_canvas) {
+                g_canvas->drawArc(event->angle);
             }
-
             delete event;
         }
-        else {
-            // 其他消息
-            OutputDebugStringW(L"[WinMain] Other message received\n");
+        else if (msg.message == WM_USER + 101) {
+            g_canvas->clear();
         }
-
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }

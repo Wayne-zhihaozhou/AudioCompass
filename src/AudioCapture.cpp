@@ -120,6 +120,9 @@ void AudioCapture::captureThread() {
 	hr = pAudioClient->Start();
 	if (FAILED(hr)) return;
 
+	const int kEmptyThreshold = 300;  // 累计空帧阈值
+	int _emptyCount = 0;               // 空帧计数器
+
 	while (running) {
 		UINT32 packetLength = 0;
 		hr = pCaptureClient->GetNextPacketSize(&packetLength);
@@ -155,6 +158,15 @@ void AudioCapture::captureThread() {
 				}
 			}
 
+			if (!(flags & AUDCLNT_BUFFERFLAGS_SILENT)) {
+				_emptyCount++;
+			}
+			if (_emptyCount >= kEmptyThreshold) {
+				// 连续空帧，通知主窗口,清理绘制
+				PostMessage(mainWindowHandle, WM_USER + 101, 0, 0);
+				_emptyCount=0;
+			}
+
 			hr = pCaptureClient->ReleaseBuffer(numFrames);
 			if (FAILED(hr)) break;
 
@@ -175,75 +187,34 @@ void AudioCapture::captureThread() {
 
 // 模型线程：分析高频 & 方位角
 void AudioCapture::myThread() {
+
 	while (running || !modelQueue.empty()) {
-		AudioEvent* eventPtr = nullptr;
+		std::unique_lock<std::mutex> lock(modelMutex);
 
-		{
-			std::unique_lock<std::mutex> lock(modelMutex);
-			// 打印队列状态
-			wchar_t buf[256];
-			swprintf_s(buf, 256, L"[myThread] Queue size before wait: %zu\n", modelQueue.size());
-			OutputDebugStringW(buf);
+		modelCV.wait(lock, [this] { return !modelQueue.empty() || !running; });
 
-			// 等待队列非空或线程停止
-			modelCV.wait(lock, [this] { return !modelQueue.empty() || !running; });
+		if (!modelQueue.empty()) {
+			auto frame = std::move(modelQueue.front());
+			modelQueue.pop();
+			lock.unlock();
 
-			swprintf_s(buf, 256, L"[myThread] Queue size after wait: %zu\n", modelQueue.size());
-			OutputDebugStringW(buf);
+			AudioEvent event;
+			event.data = frame.data;
+			event.highFreq = hasHighFreqContent(event.data.data(),
+				static_cast<uint32_t>(event.data.size() / pwfx->nBlockAlign),
+				pwfx);
+			event.angle = getGunshotAngle(event.data.data(),
+				static_cast<uint32_t>(event.data.size() / pwfx->nBlockAlign),
+				pwfx);
 
-			if (!modelQueue.empty()) {
-				auto frame = std::move(modelQueue.front());
-				modelQueue.pop();
-
-				// 创建事件对象
-				eventPtr = new AudioEvent{};
-				eventPtr->data = std::move(frame.data);
-				eventPtr->highFreq = hasHighFreqContent(
-					eventPtr->data.data(),
-					static_cast<uint32_t>(eventPtr->data.size() / pwfx->nBlockAlign),
-					pwfx
-				);
-				eventPtr->angle = getGunshotAngle(
-					eventPtr->data.data(),
-					static_cast<uint32_t>(eventPtr->data.size() / pwfx->nBlockAlign),
-					pwfx
-				);
-
-				swprintf_s(buf, 256, L"[myThread] Event generated: highFreq=%d, angle=%.2f\n",
-					eventPtr->highFreq, eventPtr->angle);
-				OutputDebugStringW(buf);
+			// 高频音事件通知主窗口
+			if (event.highFreq) {
+				PostMessage(mainWindowHandle, WM_USER + 100, 0, reinterpret_cast<LPARAM>(new AudioEvent(event)));
 			}
-		} // unlock mutex
-
-		// 队列空且线程仍在运行，发送空事件触发清屏
-		if (!eventPtr && running) {
-			eventPtr = new AudioEvent{};
-			eventPtr->highFreq = false;
-			eventPtr->angle = 0.0f;
-			OutputDebugStringW(L"[myThread] Queue empty, sending clear event\n");
 		}
-
-		// 发送消息给主窗口
-		if (eventPtr && mainWindowHandle) {
-			PostMessage(mainWindowHandle, WM_USER + 100, 0, reinterpret_cast<LPARAM>(eventPtr));
-
-			wchar_t buf[128];
-			swprintf_s(buf, 128, L"[myThread] PostMessage sent: highFreq=%d, angle=%.2f\n",
-				eventPtr->highFreq, eventPtr->angle);
-			OutputDebugStringW(buf);
-		}
-	}
-
-	// 循环退出前，确保最后一次清屏
-	if (mainWindowHandle) {
-		AudioEvent* lastEvent = new AudioEvent{};
-		lastEvent->highFreq = false;
-		lastEvent->angle = 0.0f;
-		PostMessage(mainWindowHandle, WM_USER + 100, 0, reinterpret_cast<LPARAM>(lastEvent));
-
-		OutputDebugStringW(L"[myThread] Thread exiting: sent final clear event\n");
 	}
 }
+
 
 
 
